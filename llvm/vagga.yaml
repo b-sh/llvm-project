@@ -1,0 +1,41 @@
+containers:
+  base:  
+    setup:
+    - !Ubuntu focal
+    - !Install [build-essential, cmake, python3, git]
+
+    volumes:
+      /tmp: !Tmpfs
+        size: 1Gi
+        mode: 0o1777
+
+commands:
+  cmake: !Command
+    description: Default debug cmake configuraiton
+    container: base
+    run: |
+        cd build && cmake ..
+
+  cmake-rel: !Command
+    description: CMake run for relase configuration
+    container: base
+    run: |
+        cd build && cmake -DCMAKE_BUILD_TYPE=Release ..
+
+  build: !Command
+    description: Build execution
+    container: base
+    run: |
+        cd build && cmake --build .
+
+  clean: !Command
+    description: Clean
+    container: base
+    run: |
+        make clean
+
+  bash: !Command
+    description: Shell access
+    container: base
+    run: |
+        bash
