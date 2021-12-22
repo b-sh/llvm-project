@@ -25,8 +25,8 @@ using namespace llvm;
 
 void TriCoreSubtarget::anchor() { }
 
-TriCoreSubtarget::TriCoreSubtarget(const Triple &TT, const std::string &CPU,
-                               const std::string &FS, const TargetMachine &TM)
-    : TriCoreGenSubtargetInfo(TT, CPU, FS),
+TriCoreSubtarget::TriCoreSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
+                                   StringRef FS, const TargetMachine &TM)
+    : TriCoreGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       DL("e-m:e-p:32:32-i64:32-a:0:32-n32"),
       InstrInfo(), FrameLowering(*this), TLInfo(TM, *this), TSInfo() {}

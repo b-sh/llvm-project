@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_TARGET_TRICORE_TRICOREREGISTERINFO_H
 #define LLVM_LIB_TARGET_TRICORE_TRICOREREGISTERINFO_H
 
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
 #include "TriCoreGenRegisterInfo.inc"
@@ -47,7 +47,7 @@ public:
                            RegScavenger *RS = nullptr) const override;
 
   // Debug information queries.
-  unsigned getFrameRegister(const MachineFunction &MF) const override;
+  Register getFrameRegister(const MachineFunction &MF) const override;
 };
 
 } // end namespace llvm

@@ -17,7 +17,7 @@
 
 #include "TriCore.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/Target/TargetLowering.h"
+#include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
 
@@ -82,7 +82,7 @@ namespace llvm {
                            CallingConv::ID CallConv,
                            bool isVarArg,
                            const SmallVectorImpl<ISD::InputArg> &Ins,
-                           SDLoc dl, SelectionDAG &DAG,
+                           const SDLoc &DL, SelectionDAG &DAG,
                            SmallVectorImpl<SDValue> &InVals) const override;
 
     SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
@@ -90,7 +90,7 @@ namespace llvm {
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        const SmallVectorImpl<SDValue> &OutVals, SDLoc dl,
+                        const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                         SelectionDAG &DAG) const override;
 
     SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
@@ -102,7 +102,7 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
-                        LLVMContext &Context) const;
+                        LLVMContext &Context) const override;
 
     // LowerGlobalAddress - Emit a constant load to the global address.
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;

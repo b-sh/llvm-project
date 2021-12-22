@@ -143,7 +143,8 @@ unsigned TriCoreMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 
   assert (Kind == MCExpr::SymbolRef);
 
-  cast<MCSymbolRefExpr>(Expr)->printVariantKind(outs());
+  // TODO replace
+  //cast<MCSymbolRefExpr>(Expr)->printVariantKind(outs());
   unsigned FixupKind;
   switch (cast<MCSymbolRefExpr>(Expr)->getKind()) {
   default:

@@ -36,8 +36,8 @@ void TriCoreInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   OS << "%" << StringRef(getRegisterName(RegNo)).lower();
 }
 
-void TriCoreInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
-                               StringRef Annot, const MCSubtargetInfo &STI) {
+void TriCoreInstPrinter::printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
+                         const MCSubtargetInfo &STI, raw_ostream &O) {
 
   unsigned Opcode = MI->getOpcode();
 
@@ -80,7 +80,7 @@ void TriCoreInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
         // Copy the rest operands into NewMI.
         for (unsigned i = 2; i < MI->getNumOperands(); ++i)
           NewMI.addOperand(MI->getOperand(i));
-        printInstruction(&NewMI, O);
+        printInstruction(&NewMI, Address, O);
         return;
       }
       break;
@@ -119,7 +119,7 @@ void TriCoreInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
         // Copy the rest operands into NewMI.
         for (unsigned i = 3; i < MI->getNumOperands(); ++i)
           NewMI.addOperand(MI->getOperand(i));
-        printInstruction(&NewMI, O);
+        printInstruction(&NewMI, Address, O);
         return;
       }
       break;
@@ -146,14 +146,14 @@ void TriCoreInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
         // Copy the rest operands into NewMI.
         for (unsigned i = 4; i < MI->getNumOperands(); ++i)
           NewMI.addOperand(MI->getOperand(i));
-        printInstruction(&NewMI, O);
+        printInstruction(&NewMI, Address, O);
         return;
       }
       break;
     }
   }
 
-  printInstruction(MI, O);
+  printInstruction(MI, Address, O);
   printAnnotation(O, Annot);
 }
 

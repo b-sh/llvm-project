@@ -15,5 +15,5 @@ using namespace llvm;
 Target llvm::TheTriCoreTarget;
 
 extern "C" void LLVMInitializeTriCoreTargetInfo() {
-  RegisterTarget<Triple::tricore> X(TheTriCoreTarget, "tricore", "TriCore");
+  RegisterTarget<Triple::tricore> X(TheTriCoreTarget, "tricore", "TriCore", "TriCore");
 }

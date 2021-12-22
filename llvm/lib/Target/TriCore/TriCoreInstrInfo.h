@@ -15,7 +15,7 @@
 #define TriCoreINSTRUCTIONINFO_H
 
 #include "TriCoreRegisterInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "TriCoreGenInstrInfo.inc"
@@ -56,7 +56,7 @@ public:
   /// the destination along with the FrameIndex of the loaded stack slot.  If
   /// not, return 0.  This predicate must return 0 if the instruction has
   /// any side effects other than loading from the stack slot.
-  virtual unsigned isLoadFromStackSlot(const MachineInstr *MI,
+  virtual unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                        int &FrameIndex) const override;
 //
 //  /// isStoreToStackSlot - If the specified machine instruction is a direct
@@ -64,13 +64,13 @@ public:
 //  /// the source reg along with the FrameIndex of the loaded stack slot.  If
 //  /// not, return 0.  This predicate must return 0 if the instruction has
 //  /// any side effects other than storing to the stack slot.
-  virtual unsigned isStoreToStackSlot(const MachineInstr *MI,
+  virtual unsigned isStoreToStackSlot(const MachineInstr &MI,
                                       int &FrameIndex) const override;
 
 
   virtual void copyPhysReg(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator I, DebugLoc DL,
-                           unsigned DestReg, unsigned SrcReg,
+                           MachineBasicBlock::iterator I, const DebugLoc &DL,
+                           MCRegister DstReg, MCRegister SrcReg,
                            bool KillSrc) const override;
 //
 //  virtual void storeRegToStackSlot(MachineBasicBlock &MBB,
@@ -89,7 +89,7 @@ public:
 
   void splitRegs(unsigned Reg, unsigned &LoReg, unsigned &HiReg) const;
 
-   virtual bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const
+   virtual bool expandPostRAPseudo(MachineInstr &MI) const
      override;
 
 //  TriCoreCC::CondCodes getCondFromBranchOpc(unsigned Opc) const;

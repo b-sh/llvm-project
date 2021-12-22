@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the TriCore subclass for TargetSelectionDAGInfo.
+// This file defines the TriCore subclass for SelectionDAGTargetInfo.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef TriCoreSELECTIONDAGINFO_H
 #define TriCoreSELECTIONDAGINFO_H
 
-#include "llvm/Target/TargetSelectionDAGInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
 namespace llvm {
 
-class TriCoreSelectionDAGInfo : public TargetSelectionDAGInfo {
+class TriCoreSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
   ~TriCoreSelectionDAGInfo();
 };

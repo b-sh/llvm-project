@@ -15,7 +15,7 @@
 #ifndef LLVM_LIB_TARGET_TRICORE_TRICOREFRAMELOWERING_H
 #define LLVM_LIB_TARGET_TRICORE_TRICOREFRAMELOWERING_H
 
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -32,11 +32,12 @@ namespace llvm {
     void emitEpilogue(MachineFunction &MF,
                       MachineBasicBlock &MBB) const override;
 
-    void eliminateCallFramePseudoInstr(MachineFunction &MF,
+    MachineBasicBlock::iterator
+    eliminateCallFramePseudoInstr(MachineFunction &MF,
                                   MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator I) const override;
+                                  MachineBasicBlock::iterator MI) const override;
 
-    bool hasFP(const MachineFunction &MF) const;
+    bool hasFP(const MachineFunction &MF) const override;
 
     //! Stack slot size (4 bytes)
     static int stackSlotSize() {

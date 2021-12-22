@@ -14,7 +14,7 @@
 
 #define DEBUG_TYPE "asm-printer"
 #include "TriCore.h"
-#include "InstPrinter/TriCoreInstPrinter.h"
+#include "MCTargetDesc/TriCoreInstPrinter.h"
 #include "TriCoreInstrInfo.h"
 #include "TriCoreMCInstLower.h"
 #include "TriCoreSubtarget.h"
@@ -55,7 +55,7 @@ public:
                          std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(*this) {}
 
-  virtual const char *getPassName() const { return "TriCore Assembly Printer"; }
+  virtual StringRef getPassName() const override { return "TriCore Assembly Printer"; }
 
   void EmitFunctionEntryLabel();
   void EmitInstruction(const MachineInstr *MI);
@@ -64,11 +64,11 @@ public:
 } // end of anonymous namespace
 
 void TriCoreAsmPrinter::EmitFunctionBodyStart() {
-  MCInstLowering.Initialize(Mang, &MF->getContext());
+  MCInstLowering.Initialize(&getObjFileLowering().getMangler(), &MF->getContext());
 }
 
 void TriCoreAsmPrinter::EmitFunctionEntryLabel() {
-  OutStreamer->EmitLabel(CurrentFnSym);
+  OutStreamer->emitLabel(CurrentFnSym);
 }
 
 void TriCoreAsmPrinter::EmitInstruction(const MachineInstr *MI) {

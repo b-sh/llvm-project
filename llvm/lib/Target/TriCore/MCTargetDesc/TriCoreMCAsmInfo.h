@@ -22,7 +22,7 @@ class Target;
 class Triple;
 
 class TriCoreMCAsmInfo : public MCAsmInfoELF {
-  virtual void anchor();
+  virtual void anchor() override;
 
 public:
   explicit TriCoreMCAsmInfo(const Triple &TT);

@@ -21,10 +21,10 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetOptions.h"
 #include <algorithm> // std::sort
 
@@ -34,25 +34,27 @@ using namespace llvm;
 // TriCoreFrameLowering:
 //===----------------------------------------------------------------------===//
 TriCoreFrameLowering::TriCoreFrameLowering(const TriCoreSubtarget &sti)
-  : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 4, 0) {
+  : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 
+                        /*StackAlignment=*/Align(4), 
+                        /*LocalAreaOffset=*/0) {
   // Do nothing
 }
 
 bool TriCoreFrameLowering::hasFP(const MachineFunction &MF) const {
 
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         MF.getFrameInfo()->hasVarSizedObjects() ||
-         MFI->isFrameAddressTaken());
+         MF.getFrameInfo().hasVarSizedObjects() ||
+         MFI.isFrameAddressTaken());
 }
 
 uint64_t TriCoreFrameLowering::computeStackSize(MachineFunction &MF) const {
-  MachineFrameInfo *MFI = MF.getFrameInfo();
-  uint64_t StackSize = MFI->getStackSize();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  uint64_t StackSize = MFI.getStackSize();
   unsigned StackAlign = getStackAlignment();
   if (StackAlign > 0) {
-    StackSize = RoundUpToAlignment(StackSize, StackAlign);
+    StackSize = llvm::alignTo(StackSize, StackAlign);
   }
   return StackSize;
 }
@@ -134,12 +136,8 @@ void TriCoreFrameLowering::emitEpilogue(MachineFunction &MF,
 
 // This function eliminates ADJCALLSTACKDOWN, ADJCALLSTACKUP pseudo
 // instructions
-void TriCoreFrameLowering::eliminateCallFramePseudoInstr(
+MachineBasicBlock::iterator TriCoreFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator I) const {
-  if (I->getOpcode() == TriCore::ADJCALLSTACKUP ||
-      I->getOpcode() == TriCore::ADJCALLSTACKDOWN) {
-    MBB.erase(I);
-  }
-  return;
+    MachineBasicBlock::iterator MI) const {
+  return MBB.erase(MI);
 }

@@ -109,17 +109,18 @@ def TriCore_LOGIC_OR_GE :  PatLeaf<(i32 12)>;
 def TriCore_LOGIC_OR_LT :  PatLeaf<(i32 13)>;
 
 // These are target-independent nodes, but have target-specific formats.
-def SDT_TriCoreCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32> ]>;
-def SDT_TriCoreCallSeqEnd   : SDCallSeqEnd<[ SDTCisVT<0, i32>,
-                                        SDTCisVT<1, i32> ]>;
+def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
+                                       SDTCisVT<1, i32>]>;
+def SDT_CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
+                                     SDTCisVT<1, i32>]>;
 
 def TriCoreRetFlag    : SDNode<"TriCoreISD::RET_FLAG", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_TriCoreCallSeqStart,
-                           [SDNPHasChain, SDNPOutGlue, SDNPSideEffect]>;
-def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_TriCoreCallSeqEnd,
-                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                           SDNPSideEffect]>;
+
+def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
+                           [SDNPHasChain, SDNPOutGlue]>;
+def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
@@ -239,12 +240,12 @@ def addr : ComplexPattern<iPTR, 2, "SelectAddr", [], []>;
 //===----------------------------------------------------------------------===//
 
 let Defs = [A10], Uses = [A10] in {
-def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt),
-                                    "# ADJCALLSTACKDOWN $amt",
-                                    [(callseq_start timm:$amt)]>;
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              "# ADJCALLSTACKDOWN $amt1",
+                              [(callseq_start timm:$amt1, timm:$amt2)]>;
 def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-                                    "# ADJCALLSTACKUP $amt1",
-                                    [(callseq_end timm:$amt1, timm:$amt2)]>;
+                              "# ADJCALLSTACKUP $amt1",
+                              [(callseq_end timm:$amt1, timm:$amt2)]>;
 }
 
 //===----------------------------------------------------------------------===//

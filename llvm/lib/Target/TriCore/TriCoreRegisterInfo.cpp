@@ -24,13 +24,13 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -92,7 +92,7 @@ TriCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const MachineFunction &MF = *MI.getParent()->getParent();
   DebugLoc dl = MI.getDebugLoc();
   MachineBasicBlock &MBB = *MI.getParent();
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineOperand &FIOp = MI.getOperand(FIOperandNum);
   unsigned FI = FIOp.getIndex();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
@@ -101,7 +101,7 @@ TriCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   unsigned ImmOpIdx = 0;
 
   if (MI.getOpcode() == TriCore::ADDrc) {    
-    int Offset = MFI->getObjectOffset(FI);    
+    int Offset = MFI.getObjectOffset(FI);    
     Offset = -Offset;
     const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
     MI.setDesc(TII.get(TriCore::MOV_Drr));
@@ -126,13 +126,13 @@ TriCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   // FIXME: check the size of offset.
   MachineOperand &ImmOp = MI.getOperand(ImmOpIdx);
-  int Offset = MFI->getObjectOffset(FI);
+  int Offset = MFI.getObjectOffset(FI);
   FIOp.ChangeToRegister(BasePtr, false);
   ImmOp.setImm(Offset);
 }
 
 
-unsigned TriCoreRegisterInfo::getFrameRegister(const MachineFunction &MF) const {  
+Register TriCoreRegisterInfo::getFrameRegister(const MachineFunction &MF) const {  
   const TriCoreFrameLowering *TFI = getFrameLowering(MF);
   return TFI->hasFP(MF) ? TriCore::A14 : TriCore::A10;  
 }

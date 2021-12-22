@@ -47,10 +47,10 @@ TriCoreInstrInfo::TriCoreInstrInfo()
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
 unsigned
-TriCoreInstrInfo::isLoadFromStackSlot(const MachineInstr *MI, int &FrameIndex)
+TriCoreInstrInfo::isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex)
                                           const{
 
-//  if ((MI->getOperand(1).isFI()) && (MI->getOperand(2).isImm())
+//  if ((MI.getOperand(1).isFI()) && (MI->getOperand(2).isImm())
 //      && (MI->getOperand(2).getImm() == 0)) {
 //    FrameIndex = MI->getOperand(1).getIndex();
 //    return MI->getOperand(0).getReg();
@@ -67,7 +67,7 @@ TriCoreInstrInfo::isLoadFromStackSlot(const MachineInstr *MI, int &FrameIndex)
   /// the source reg along with the FrameIndex of the loaded stack slot.  If
   /// not, return 0.  This predicate must return 0 if the instruction has
   /// any side effects other than storing to the stack slot.
-unsigned TriCoreInstrInfo::isStoreToStackSlot(const MachineInstr *MI,
+unsigned TriCoreInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     int &FrameIndex) const {
 
 //  if ((MI->getOperand(0).isFI()) && (MI->getOperand(1).isImm())
@@ -84,8 +84,8 @@ unsigned TriCoreInstrInfo::isStoreToStackSlot(const MachineInstr *MI,
 }
 
 void TriCoreInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator I, DebugLoc DL,
-    unsigned DestReg, unsigned SrcReg,
+    MachineBasicBlock::iterator I, const DebugLoc &DL,
+    MCRegister DestReg, MCRegister SrcReg,
     bool KillSrc) const {
 
 
@@ -442,22 +442,22 @@ void TriCoreInstrInfo::splitRegs(unsigned Reg, unsigned &LoReg, unsigned &HiReg)
 }
 
 
-bool TriCoreInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const
+bool TriCoreInstrInfo::expandPostRAPseudo(MachineInstr &MI) const
 {
-  DebugLoc DL = MI->getDebugLoc();
-  MachineBasicBlock &MBB = *MI->getParent();
+  DebugLoc DL = MI.getDebugLoc();
+  MachineBasicBlock &MBB = *MI.getParent();
 
-  switch (MI->getOpcode())
+  switch (MI.getOpcode())
   {
   default:
     return false;
   case TriCore::NOTrr64: {
     unsigned OpLo, OpHi, DstLoReg, DstHiReg;
 
-    unsigned DstReg = MI->getOperand(0).getReg();
+    unsigned DstReg = MI.getOperand(0).getReg();
 
-    bool DstIsDead = MI->getOperand(0).isDead();
-    bool DstIsKill = MI->getOperand(1).isKill();
+    bool DstIsDead = MI.getOperand(0).isDead();
+    bool DstIsKill = MI.getOperand(1).isKill();
 
     splitRegs(DstReg, DstLoReg, DstHiReg);
 
@@ -480,23 +480,23 @@ bool TriCoreInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const
   case TriCore::ORsrr64:{
     unsigned OpLo, OpHi, Src0LoReg, Src0HiReg,
               Src1LoReg, Src1HiReg, DstLoReg, DstHiReg;
-    unsigned DstReg = MI->getOperand(0).getReg();
-    unsigned Src0Reg = MI->getOperand(1).getReg();
-    unsigned Src1Reg = MI->getOperand(2).getReg();
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned Src0Reg = MI.getOperand(1).getReg();
+    unsigned Src1Reg = MI.getOperand(2).getReg();
 
-    bool DstIsDead = MI->getOperand(0).isDead();
-    bool Src0IsKill = MI->getOperand(1).isKill();
-    bool Src1IsKill = MI->getOperand(2).isKill();
+    bool DstIsDead = MI.getOperand(0).isDead();
+    bool Src0IsKill = MI.getOperand(1).isKill();
+    bool Src1IsKill = MI.getOperand(2).isKill();
 
     splitRegs(Src0Reg, Src0LoReg, Src0HiReg);
     splitRegs(Src1Reg, Src1LoReg, Src1HiReg);
     splitRegs(DstReg, DstLoReg, DstHiReg);
 
-    if (MI->getOpcode() == TriCore::ANDsrr64) {
+    if (MI.getOpcode() == TriCore::ANDsrr64) {
         OpLo = TriCore::ANDsrr;
         OpHi = TriCore::ANDsrr;
     }
-    else if (MI->getOpcode() == TriCore::XORsrr64) {
+    else if (MI.getOpcode() == TriCore::XORsrr64) {
       OpLo = TriCore::XORsrr;
       OpHi = TriCore::XORsrr;
     }
@@ -528,36 +528,36 @@ bool TriCoreInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const
       unsigned OpLo, OpHi, Src0LoReg, Src0HiReg,
       DstLoReg, DstHiReg;
 
-      unsigned DstReg = MI->getOperand(0).getReg();
-      unsigned Src0Reg = MI->getOperand(1).getReg();
+      unsigned DstReg = MI.getOperand(0).getReg();
+      unsigned Src0Reg = MI.getOperand(1).getReg();
 
-      bool DstIsDead = MI->getOperand(0).isDead();
-      bool Src0IsKill = MI->getOperand(1).isKill();
+      bool DstIsDead = MI.getOperand(0).isDead();
+      bool Src0IsKill = MI.getOperand(1).isKill();
 
-      int64_t immVal = MI->getOperand(2).getImm();
+      int64_t immVal = MI.getOperand(2).getImm();
       int32_t lowByte = immVal & 0xffffffff;
       int32_t highByte = (immVal>>32) & 0xffffffff;
 
       splitRegs(Src0Reg, Src0LoReg, Src0HiReg);
       splitRegs(DstReg, DstLoReg, DstHiReg);
 
-      if (MI->getOpcode() == TriCore::ANDrc64) {
+      if (MI.getOpcode() == TriCore::ANDrc64) {
         OpLo = TriCore::ANDrc;
         OpHi = TriCore::ANDrc;
       }
-      else if (MI->getOpcode() == TriCore::XORrc64) {
+      else if (MI.getOpcode() == TriCore::XORrc64) {
         OpLo = TriCore::XORrc;
         OpHi = TriCore::XORrc;
       }
-      else if (MI->getOpcode() == TriCore::XORrcneg64) {
+      else if (MI.getOpcode() == TriCore::XORrcneg64) {
         OpLo = TriCore::XNORrc;
         OpHi = TriCore::XNORrc;
       }
-      else if (MI->getOpcode() == TriCore::ORNrc64) {
+      else if (MI.getOpcode() == TriCore::ORNrc64) {
         OpLo = TriCore::ORNrc;
         OpHi = TriCore::ORNrc;
       }
-      else if(MI->getOpcode() == TriCore::ANDNrc64) {
+      else if(MI.getOpcode() == TriCore::ANDNrc64) {
         OpLo = TriCore::ANDNrc;
         OpHi = TriCore::ANDNrc;
       }
@@ -584,20 +584,20 @@ bool TriCoreInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const
 
     unsigned OpLo, OpHi, Src0LoReg, Src0HiReg,
               Src1LoReg, Src1HiReg, DstLoReg, DstHiReg;
-    unsigned DstReg = MI->getOperand(0).getReg();
-    unsigned Src0Reg = MI->getOperand(1).getReg();
-    unsigned Src1Reg = MI->getOperand(2).getReg();
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned Src0Reg = MI.getOperand(1).getReg();
+    unsigned Src1Reg = MI.getOperand(2).getReg();
 
-    bool DstIsDead = MI->getOperand(0).isDead();
-    bool Src0IsKill = MI->getOperand(1).isKill();
-    bool Src1IsKill = MI->getOperand(2).isKill();
-    bool ImpIsDead = MI->getOperand(3).isDead();
+    bool DstIsDead = MI.getOperand(0).isDead();
+    bool Src0IsKill = MI.getOperand(1).isKill();
+    bool Src1IsKill = MI.getOperand(2).isKill();
+    bool ImpIsDead = MI.getOperand(3).isDead();
 
     splitRegs(Src0Reg, Src0LoReg, Src0HiReg);
     splitRegs(Src1Reg, Src1LoReg, Src1HiReg);
     splitRegs(DstReg, DstLoReg, DstHiReg);
 
-    if (MI->getOpcode() == TriCore::ADDi64) {
+    if (MI.getOpcode() == TriCore::ADDi64) {
       OpLo = TriCore::ADDXrr;
       OpHi = TriCore::ADDCrr;
     }
@@ -633,14 +633,14 @@ bool TriCoreInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const
     unsigned OpLo, OpHi, Src0LoReg, Src0HiReg,
     DstLoReg, DstHiReg;
 
-    unsigned DstReg = MI->getOperand(0).getReg();
-    unsigned Src0Reg = MI->getOperand(1).getReg();
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned Src0Reg = MI.getOperand(1).getReg();
 
-    bool DstIsDead = MI->getOperand(0).isDead();
-    bool Src0IsKill = MI->getOperand(1).isKill();
-    bool ImpIsDead = MI->getOperand(3).isDead();
+    bool DstIsDead = MI.getOperand(0).isDead();
+    bool Src0IsKill = MI.getOperand(1).isKill();
+    bool ImpIsDead = MI.getOperand(3).isDead();
 
-    int64_t immVal = MI->getOperand(2).getImm();
+    int64_t immVal = MI.getOperand(2).getImm();
     int32_t lowByte = immVal & 0xffffffff;
     int32_t highByte = (immVal>>32) & 0xffffffff;
 
@@ -677,10 +677,10 @@ bool TriCoreInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const
   }
   case TriCore::MOVi32: {
 
-    const unsigned DstReg = MI->getOperand(0).getReg();
-    const bool DstIsDead = MI->getOperand(0).isDead();
+    const unsigned DstReg = MI.getOperand(0).getReg();
+    const bool DstIsDead = MI.getOperand(0).isDead();
 
-    const MachineOperand &MO = MI->getOperand(1);
+    const MachineOperand &MO = MI.getOperand(1);
     if (MO.isImm()) {
 
       int64_t ImmVal = MO.getImm();

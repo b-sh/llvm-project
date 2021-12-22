@@ -94,8 +94,8 @@ public:
   explicit TriCoreDAGToDAGISel(TriCoreTargetMachine &TM, CodeGenOpt::Level OptLevel)
   : SelectionDAGISel(TM, OptLevel), Subtarget(*TM.getSubtargetImpl()) {}
 
-  SDNode *Select(SDNode *N);
-  SDNode *SelectConstant(SDNode *N);
+  void Select(SDNode *Node) override;
+  void SelectConstant(SDNode *N);
 
   bool SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddr_new(SDValue N, SDValue &Base, SDValue &Disp);
@@ -103,7 +103,7 @@ public:
   bool MatchWrapper(SDValue N, TriCoreISelAddressMode &AM);
   bool MatchAddressBase(SDValue N, TriCoreISelAddressMode &AM);
   static bool isPointer();
-  virtual const char *getPassName() const {
+  virtual StringRef getPassName() const override {
     return "TriCore DAG->DAG Pattern Instruction Selection";
   }
 
@@ -124,7 +124,7 @@ bool TriCoreDAGToDAGISel::MatchWrapper(SDValue N, TriCoreISelAddressMode &AM) {
   // If the addressing mode already has a symbol as the displacement, we can
   // never match another symbol.
   if (AM.hasSymbolicDisplacement()) {
-    DEBUG(errs().changeColor(raw_ostream::YELLOW,1);
+    LLVM_DEBUG(errs().changeColor(raw_ostream::YELLOW,1);
     errs() <<"hasSymbolicDisplacement\n";
     N.dump();
     errs().changeColor(raw_ostream::WHITE,0); );
@@ -133,14 +133,14 @@ bool TriCoreDAGToDAGISel::MatchWrapper(SDValue N, TriCoreISelAddressMode &AM) {
 
   SDValue N0 = N.getOperand(0);
 
-  DEBUG(errs() << "Match Wrapper N => ";
+  LLVM_DEBUG(errs() << "Match Wrapper N => ";
   N.dump();
   errs()<< "N0 => "; N0.dump(); );
 
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(N0)) {
     AM.GV = G->getGlobal();
     AM.Disp += G->getOffset();
-    DEBUG(errs() << "MatchWrapper->Displacement: " << AM.Disp );
+    LLVM_DEBUG(errs() << "MatchWrapper->Displacement: " << AM.Disp );
     //AM.SymbolFlags = G->getTargetFlags();
   }
   return false;
@@ -163,8 +163,8 @@ bool TriCoreDAGToDAGISel::MatchAddressBase(SDValue N, TriCoreISelAddressMode &AM
 
 
 bool TriCoreDAGToDAGISel::MatchAddress(SDValue N, TriCoreISelAddressMode &AM) {
-  DEBUG(errs() << "MatchAddress: "; AM.dump());
-  DEBUG(errs() << "Node: "; N.dump());
+  LLVM_DEBUG(errs() << "MatchAddress: "; AM.dump());
+  LLVM_DEBUG(errs() << "Node: "; N.dump());
 
 
   switch (N.getOpcode()) {
@@ -173,7 +173,7 @@ bool TriCoreDAGToDAGISel::MatchAddress(SDValue N, TriCoreISelAddressMode &AM) {
 
     uint64_t Val = cast<ConstantSDNode>(N)->getSExtValue();
     AM.Disp += Val;
-    DEBUG(errs() << "MatchAddress->Disp: " << AM.Disp ;);
+    LLVM_DEBUG(errs() << "MatchAddress->Disp: " << AM.Disp ;);
     return false;
   }
 
@@ -234,7 +234,7 @@ bool TriCoreDAGToDAGISel::SelectAddr_new(SDValue N,
     SDValue &Base, SDValue &Disp) {
   TriCoreISelAddressMode AM;
 
-  DEBUG( errs().changeColor(raw_ostream::YELLOW,1);
+  LLVM_DEBUG( errs().changeColor(raw_ostream::YELLOW,1);
   N.dump();
   errs().changeColor(raw_ostream::WHITE,0) );
 
@@ -244,7 +244,7 @@ bool TriCoreDAGToDAGISel::SelectAddr_new(SDValue N,
 
   EVT VT = N.getValueType();
   if (AM.BaseType == TriCoreISelAddressMode::RegBase) {
-    DEBUG(errs() << "It's a reg base";);
+    LLVM_DEBUG(errs() << "It's a reg base";);
     if (!AM.Base.Reg.getNode())
       AM.Base.Reg = CurDAG->getRegister(0, VT);
   }
@@ -257,13 +257,13 @@ bool TriCoreDAGToDAGISel::SelectAddr_new(SDValue N,
                      : AM.Base.Reg;
 
   if (AM.GV) {
-    DEBUG(errs() <<"AM.GV" );
+    LLVM_DEBUG(errs() <<"AM.GV" );
     //GlobalAddressSDNode *gAdd = dyn_cast<GlobalAddressSDNode>(N.getOperand(0));
     Base = N;
     Disp = CurDAG->getTargetConstant(AM.Disp, N, MVT::i32);
   }
   else {
-    DEBUG(errs()<<"SelectAddr -> AM.Disp\n";
+    LLVM_DEBUG(errs()<<"SelectAddr -> AM.Disp\n";
     errs()<< "SelectAddr -> Displacement: " << AM.Disp; );
     Disp = CurDAG->getTargetConstant(AM.Disp, SDLoc(N), MVT::i32);
   }
@@ -345,7 +345,7 @@ static int ipow(int base)
     return result;
 }
 
-SDNode *TriCoreDAGToDAGISel::SelectConstant(SDNode *N) {
+void TriCoreDAGToDAGISel::SelectConstant(SDNode *N) {
    // Make sure the immediate size is supported.
     ConstantSDNode *ConstVal = cast<ConstantSDNode>(N);
     uint64_t ImmVal = ConstVal->getZExtValue();
@@ -367,23 +367,25 @@ SDNode *TriCoreDAGToDAGISel::SelectConstant(SDNode *N) {
         SDValue _constVal = CurDAG->getTargetConstant(0, N, MVT::i32);
         SDValue _width = CurDAG->getTargetConstant(0, N, MVT::i32);
         SDValue _pos = CurDAG->getTargetConstant(0, N, MVT::i32);
-        return CurDAG->getMachineNode(TriCore::IMASKrcpw, N, MVT::i64,
+        CurDAG->getMachineNode(TriCore::IMASKrcpw, N, MVT::i64,
                     _constVal, _pos, _width);
+        return;
       }
 
       // In case both bytes contain set bits then exit
       if(ImmSVal<0 || (higherByte!=0 && lowerByte!=0)) {
         outs()<< "exit\n";
-        return SelectCode(N);
+        SelectCode(N);
+        return;
       }
       else if(higherByte==0 && lowerByte!=0) {
         uint64_t posLSB = getFFS(lowerByte) - 1;
         uint64_t numSetBits = getNumSetBits(lowerByte);
         uint64_t numConsecBits = getNumConsecutiveOnes(lowerByte);
         // In case the patch of set bits is not a mask then exit
-        if (numSetBits != numConsecBits) return SelectCode(N);
+        if (numSetBits != numConsecBits) { SelectCode(N); return; }
         // In case the mask for the lower byte is > 0xf we exit
-        if (numConsecBits > 4) return SelectCode(N);
+        if (numConsecBits > 4) { SelectCode(N); return; }
 
         // In case we are dealing with the lower byte,
         // only Const4Val is set
@@ -395,8 +397,9 @@ SDNode *TriCoreDAGToDAGISel::SelectConstant(SDNode *N) {
         SDValue _width = CurDAG->getTargetConstant(width, N, MVT::i32);
         SDValue _pos = CurDAG->getTargetConstant(posLSB, N, MVT::i32);
 
-        return CurDAG->getMachineNode(TriCore::IMASKrcpw, N, MVT::i64,
+        CurDAG->getMachineNode(TriCore::IMASKrcpw, N, MVT::i64,
             _constVal, _pos, _width);
+        return;
       }
       else if (higherByte!=0 && lowerByte==0) {
         uint64_t posLSB = getFFS(higherByte) - 1;
@@ -405,18 +408,18 @@ SDNode *TriCoreDAGToDAGISel::SelectConstant(SDNode *N) {
         outs()<<"posLSB: " << posLSB << "\n";
         outs()<<"numConsecBits: " << numConsecBits << "\n";
         // In case the patch of set bits is not a mask then exit
-        if (numSetBits != numConsecBits) return SelectCode(N);
+        if (numSetBits != numConsecBits) { SelectCode(N); return; }
 
         // As per data sheet: (pos  + width)>31 is undefined
-        if ((posLSB + numConsecBits) > 31) return SelectCode(N);
+        if ((posLSB + numConsecBits) > 31) { SelectCode(N); return; }
 
         SDValue _constVal = CurDAG->getTargetConstant(0, N, MVT::i32);
         SDValue _width = CurDAG->getTargetConstant(numConsecBits, N, MVT::i32);
         SDValue _pos = CurDAG->getTargetConstant(posLSB, N, MVT::i32);
 
-        return CurDAG->getMachineNode(TriCore::IMASKrcpw, N, MVT::i64,
+        CurDAG->getMachineNode(TriCore::IMASKrcpw, N, MVT::i64,
             _constVal, _pos, _width);
-
+        return;
       }
 
     }
@@ -450,22 +453,28 @@ SDNode *TriCoreDAGToDAGISel::SelectConstant(SDNode *N) {
     MachineSDNode *Move;
 
     if ((ImmHi == 0) && ImmLo) {
-      if (ImmSVal >=0 && ImmSVal < 32768)
-        return CurDAG->getMachineNode(TriCore::MOVrlc, N, MVT::i32, ConstEImm);
-      else if(ImmSVal >=32768 && ImmSVal < 65536)
-        return CurDAG->getMachineNode(TriCore::MOV_Urlc, N, MVT::i32, ConstEImm);
-
+      if (ImmSVal >=0 && ImmSVal < 32768) {
+        CurDAG->getMachineNode(TriCore::MOVrlc, N, MVT::i32, ConstEImm);
+        return;
+      } else if(ImmSVal >=32768 && ImmSVal < 65536) {
+        CurDAG->getMachineNode(TriCore::MOV_Urlc, N, MVT::i32, ConstEImm);
+        return;
+      }
     }
     else if(ImmHi && (ImmLo == 0))
       Move = CurDAG->getMachineNode(TriCore::MOVHrlc, N, MVT::i32, ConstHi);
-    else if((ImmHi == 0) && (ImmLo == 0))
-      return CurDAG->getMachineNode(TriCore::MOVrlc, N, MVT::i32, ConstHi);
+    else if((ImmHi == 0) && (ImmLo == 0)) {
+      CurDAG->getMachineNode(TriCore::MOVrlc, N, MVT::i32, ConstHi);
+      return;
+    }
     else {
 
       Move = CurDAG->getMachineNode(TriCore::MOVHrlc, N, MVT::i32, ConstHi);
 
-      if ( (ImmSVal >= -32768) && (ImmSVal < 0))
-          return CurDAG->getMachineNode(TriCore::MOVrlc, N, MVT::i32, ConstSImm);
+      if ( (ImmSVal >= -32768) && (ImmSVal < 0)) {
+          CurDAG->getMachineNode(TriCore::MOVrlc, N, MVT::i32, ConstSImm);
+          return;
+      }
 
       if( (ImmSLo >= -8 && ImmSLo < 8 ) || ImmLo < 8)
         Move = CurDAG->getMachineNode(TriCore::ADDsrc, N, MVT::i32,
@@ -477,30 +486,32 @@ SDNode *TriCoreDAGToDAGISel::SelectConstant(SDNode *N) {
         Move = CurDAG->getMachineNode(TriCore::ADDIrlc, N, MVT::i32,
                                               SDValue(Move,0), ConstLo);
       }
-
-    return Move;
 }
 
-SDNode *TriCoreDAGToDAGISel::Select(SDNode *N) {
+void TriCoreDAGToDAGISel::Select(SDNode *N) {
 
 
   SDLoc dl(N);
   // Dump information about the Node being selected
-  DEBUG(errs().changeColor(raw_ostream::GREEN) << "Selecting: ");
-  DEBUG(N->dump(CurDAG));
-  DEBUG(errs() << "\n");
+  LLVM_DEBUG(errs().changeColor(raw_ostream::GREEN) << "Selecting: ");
+  LLVM_DEBUG(N->dump(CurDAG));
+  LLVM_DEBUG(errs() << "\n");
   switch (N->getOpcode()) {
-  case ISD::Constant:
-    return SelectConstant(N);
+  case ISD::Constant: {
+    SelectConstant(N);
+    return;
+  }
   case ISD::FrameIndex: {
     int FI = cast<FrameIndexSDNode>(N)->getIndex();
     SDValue TFI = CurDAG->getTargetFrameIndex(FI, MVT::i32);
     if (N->hasOneUse()) {
-      return CurDAG->SelectNodeTo(N, TriCore::ADDrc, MVT::i32, TFI,
+      CurDAG->SelectNodeTo(N, TriCore::ADDrc, MVT::i32, TFI,
           CurDAG->getTargetConstant(0, dl, MVT::i32));
+      return;
     }
-    return CurDAG->getMachineNode(TriCore::ADDrc, dl, MVT::i32, TFI,
+    CurDAG->getMachineNode(TriCore::ADDrc, dl, MVT::i32, TFI,
         CurDAG->getTargetConstant(0, dl, MVT::i32));
+    return;
   }
   case ISD::STORE: {
     ptyType = false;
@@ -511,15 +522,12 @@ SDNode *TriCoreDAGToDAGISel::Select(SDNode *N) {
 
 }
 
-  SDNode *ResNode = SelectCode(N);
+  SelectCode(N);
 
-  DEBUG(errs() << "=> ");
-  if (ResNode == nullptr || ResNode == N)
-    DEBUG(N->dump(CurDAG));
-  else
-    DEBUG(ResNode->dump(CurDAG));
-  DEBUG(errs() << "\n");
-  return ResNode;
+  LLVM_DEBUG(errs() << "=> ");
+  if (N == nullptr)
+    LLVM_DEBUG(N->dump(CurDAG));
+  LLVM_DEBUG(errs() << "\n");
 }
 /// createTriCoreISelDag - This pass converts a legalized DAG into a
 /// TriCore-specific DAG, ready for instruction scheduling.

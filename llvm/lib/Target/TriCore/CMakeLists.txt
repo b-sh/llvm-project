@@ -25,9 +25,24 @@ add_llvm_target(TriCoreCodeGen
   TriCoreAsmPrinter.cpp
   TriCoreMCInstLower.cpp
   TriCoreCallingConvHook.cpp
+
+  LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  Core
+  CodeGen
+  MC
+  TriCoreDesc
+  TriCoreInfo
+  SelectionDAG
+  Support
+  Target
+  GlobalISel
+
+  ADD_TO_COMPONENT
+  TriCore
   )
 
 add_subdirectory(Disassembler)
-add_subdirectory(InstPrinter)
 add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)

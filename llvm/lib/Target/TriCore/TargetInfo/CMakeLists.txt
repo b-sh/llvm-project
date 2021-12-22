@@ -1,3 +1,9 @@
-add_llvm_library(LLVMTriCoreInfo
+add_llvm_component_library(LLVMTriCoreInfo
   TriCoreTargetInfo.cpp
+
+  LINK_COMPONENTS
+  Support
+
+  ADD_TO_COMPONENT
+  TriCore
   )

@@ -15,7 +15,7 @@
 #include "TriCore.h"
 #include "TriCoreRegisterInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -37,7 +37,6 @@ public:
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
 }
@@ -1709,7 +1708,7 @@ DecodeSYSInstruction(MCInst &Inst, unsigned Insn, uint64_t Address,
 
 MCDisassembler::DecodeStatus TriCoreDisassembler::getInstruction(
     MCInst &instr, uint64_t &Size, ArrayRef<uint8_t> Bytes, uint64_t Address,
-    raw_ostream &vStream, raw_ostream &cStream) const {
+    raw_ostream &cStream) const {
   uint16_t insn16;
 
   if (!readInstruction16(Bytes, Address, Size, insn16)) {

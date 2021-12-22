@@ -28,14 +28,14 @@ namespace {
 
     virtual ~TriCoreELFObjectWriter();
 
-    unsigned GetRelocType(const MCValue &Target, const MCFixup &Fixup,
-                          bool IsPCRel) const override;
+  protected:
+    virtual unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                          const MCFixup &Fixup, bool IsPCRel) const override;
   };
 }
 
-unsigned TriCoreELFObjectWriter::GetRelocType(const MCValue &Target,
-                                          const MCFixup &Fixup,
-                                          bool IsPCRel) const {
+unsigned TriCoreELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
+                          const MCFixup &Fixup, bool IsPCRel) const {
   if (!IsPCRel) {
     llvm_unreachable("Only dealying with PC-relative fixups for now");
   }
@@ -60,7 +60,7 @@ TriCoreELFObjectWriter::TriCoreELFObjectWriter(uint8_t OSABI)
 
 TriCoreELFObjectWriter::~TriCoreELFObjectWriter() {}
 
-MCObjectWriter *llvm::createTriCoreELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI) {
-  MCELFObjectTargetWriter *MOTW = new TriCoreELFObjectWriter(OSABI);
-  return createELFObjectWriter(MOTW, OS, /*IsLittleEndian=*/true);
+std::unique_ptr<MCObjectTargetWriter> 
+llvm::createTriCoreELFObjectWriter(uint8_t OSABI) {
+  return std::make_unique<TriCoreELFObjectWriter>(OSABI);
 }

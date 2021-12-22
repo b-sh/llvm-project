@@ -18,6 +18,7 @@
 #include "TriCoreSelectionDAGInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -30,6 +31,13 @@ using namespace llvm;
 static std::string computeDataLayout() {
   return "e-m:e-p:32:32-i64:32-a:0:32-n32";
   //"e-m:e-p:32:32-i8:8:8-i16:16:16-i64:32-f32:32-f64:32-a:8:16-n32:64-S32";
+}
+
+static Reloc::Model getEffectiveRelocModel(const Triple &TT,
+                                           Optional<Reloc::Model> RM) {
+  if (!RM.hasValue())
+    return Reloc::Static;
+  return *RM;
 }
 
 /** 
@@ -51,12 +59,13 @@ static std::string computeDataLayout() {
 TriCoreTargetMachine::TriCoreTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Reloc::Model RM, CodeModel::Model CM,
-                                           CodeGenOpt::Level OL)
-    : LLVMTargetMachine(T, computeDataLayout(), 
-                        TT, CPU, FS, Options, RM, CM, OL),
-      TLOF(make_unique<TargetLoweringObjectFileELF>()),
-      Subtarget(TT, CPU, FS, *this) {
+                                           Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                                           CodeGenOpt::Level OL, bool JIT)
+    : LLVMTargetMachine(T, computeDataLayout(), TT, CPU, FS, Options, 
+                        getEffectiveRelocModel(TT, RM),
+                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+      TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
+      Subtarget(TT, CPU, "", FS, *this) {
   initAsmInfo();
 }
 
@@ -66,7 +75,7 @@ namespace {
 /// TriCore Code Generator Pass Configuration Options.
 class TriCorePassConfig : public TargetPassConfig {
 public:
-  TriCorePassConfig(TriCoreTargetMachine *TM, legacy::PassManagerBase &PM)
+  TriCorePassConfig(TriCoreTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {}
 
   TriCoreTargetMachine &getTriCoreTargetMachine() const {
@@ -79,14 +88,15 @@ public:
 };
 } // namespace
 
-TargetPassConfig *TriCoreTargetMachine::createPassConfig(legacy::PassManagerBase &PM) {
-  return new TriCorePassConfig(this, PM);
+TargetPassConfig *TriCoreTargetMachine::createPassConfig(PassManagerBase &PM) {
+  return new TriCorePassConfig(*this, PM);
 }
 
 bool TriCorePassConfig::addPreISel() { return false; }
 
 bool TriCorePassConfig::addInstSelector() {
   addPass(createTriCoreISelDag(getTriCoreTargetMachine(), getOptLevel()));
+  
   return false;
 }
 

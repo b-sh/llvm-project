@@ -12,9 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "TriCoreMCTargetDesc.h"
-#include "InstPrinter/TriCoreInstPrinter.h"
+#include "TriCoreInstPrinter.h"
 #include "TriCoreMCAsmInfo.h"
-#include "llvm/MC/MCCodeGenInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -49,30 +48,13 @@ static MCRegisterInfo *createTriCoreMCRegisterInfo(const Triple &TT) {
 static MCSubtargetInfo *createTriCoreMCSubtargetInfo(const Triple &TT,
                                                  StringRef CPU,
                                                  StringRef FS) {
-  return createTriCoreMCSubtargetInfoImpl(TT, CPU, FS);
+  return createTriCoreMCSubtargetInfoImpl(TT, CPU, "", FS);
 }
 
 static MCAsmInfo *createTriCoreMCAsmInfo(const MCRegisterInfo &MRI,
-                                     const Triple &TT) {
+                                     const Triple &TT,
+                                     const MCTargetOptions &Options) {
   return new TriCoreMCAsmInfo(TT);
-}
-
-static MCCodeGenInfo *createTriCoreMCCodeGenInfo(const Triple &TT, Reloc::Model RM,
-                                             CodeModel::Model CM,
-                                             CodeGenOpt::Level OL) {
-  MCCodeGenInfo *X = new MCCodeGenInfo();
-  if (RM == Reloc::Default) {
-    RM = Reloc::Static;
-  }
-  if (CM == CodeModel::Default) {
-    CM = CodeModel::Small;
-  }
-  if (CM != CodeModel::Small && CM != CodeModel::Large) {
-    report_fatal_error("Target only supports CodeModel Small or Large");
-  }
-
-  X->initMCCodeGenInfo(RM, CM, OL);
-  return X;
 }
 
 static MCInstPrinter *
@@ -85,10 +67,7 @@ createTriCoreMCInstPrinter(const Triple &TT, unsigned SyntaxVariant,
 // Force static initialization.
 extern "C" void LLVMInitializeTriCoreTargetMC() {
   // Register the MC asm info.
-  RegisterMCAsmInfoFn X(TheTriCoreTarget, createTriCoreMCAsmInfo);
-
-  // Register the MC codegen info.
-  TargetRegistry::RegisterMCCodeGenInfo(TheTriCoreTarget, createTriCoreMCCodeGenInfo);
+  TargetRegistry::RegisterMCAsmInfo(TheTriCoreTarget, createTriCoreMCAsmInfo);
 
   // Register the MC instruction info.
   TargetRegistry::RegisterMCInstrInfo(TheTriCoreTarget, createTriCoreMCInstrInfo);

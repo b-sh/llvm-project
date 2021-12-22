@@ -400,8 +400,7 @@ TriCoreTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   // to set, the condition code register to branch on, the true/false values to
   // select between, and a branch opcode to use.
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
-  MachineFunction::iterator I = BB;
-  ++I;
+  MachineFunction::iterator I = ++BB->getIterator();
 
   //  thisMBB:
   //  ...
@@ -488,8 +487,9 @@ SDValue TriCoreTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const unsigned NumBytes = CCInfo.getNextStackOffset();
 
   Chain =
-      DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(NumBytes, Loc, true),
-                           Loc);
+      DAG.getCALLSEQ_START(Chain, NumBytes, 0, Loc);
+      // DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(NumBytes, Loc, true), 0,
+      //                      Loc);
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
@@ -527,7 +527,7 @@ SDValue TriCoreTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SDValue PtrOff = DAG.getIntPtrConstant(VA.getLocMemOffset(), Loc);
     PtrOff = DAG.getNode(ISD::ADD, Loc, MVT::i32, StackPtr, PtrOff);
     MemOpChains.push_back(DAG.getStore(Chain, Loc, Arg, PtrOff,
-                                       MachinePointerInfo(), false, false, 0));
+                                       MachinePointerInfo()));
   }
 
   // Emit all stores, make sure they occur before the call.
@@ -596,7 +596,7 @@ SDValue TriCoreTargetLowering::LowerCallResult(
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
 
-  Type* t= DAG.getMachineFunction().getFunction()->getReturnType();
+  Type* t= DAG.getMachineFunction().getFunction().getReturnType();
   t->dump();
   outs() << "LowerCallResult IsPointer: " << t->isPointerTy() << "\n";
 
@@ -627,7 +627,7 @@ TriCoreTargetLowering::LowerFormalArguments(SDValue Chain,
                                           CallingConv::ID CallConv,
                                           bool isVarArg,
                                       const SmallVectorImpl<ISD::InputArg> &Ins,
-                                          SDLoc dl,
+                                          const SDLoc &DL,
                                           SelectionDAG &DAG,
                                           SmallVectorImpl<SDValue> &InVals)
                                             const {
@@ -643,7 +643,7 @@ TriCoreTargetLowering::LowerFormalArguments(SDValue Chain,
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
       *DAG.getContext());
 
-  StringRef funName = DAG.getMachineFunction().getFunction()->getName();
+  StringRef funName = MF.getFunction().getName();
 
 //  DAG.getMachineFunction().getFunction()
   CCInfo.AnalyzeFormalArguments(Ins, CC_TriCore);
@@ -692,13 +692,13 @@ TriCoreTargetLowering::LowerFormalArguments(SDValue Chain,
         RegInfo.addLiveIn(VA.getLocReg(), VReg); //mark the register is inuse
         TCCH.saveRegRecord(funName, VA.getLocReg(), true);
         TCCH++;
-        ArgIn = DAG.getCopyFromReg(Chain, dl, VReg, MVT::iPTR);
+        ArgIn = DAG.getCopyFromReg(Chain, DL, VReg, MVT::iPTR);
       }
       else if (TCCH.isRegValid64Type(MF))  {
         VReg = RegInfo.createVirtualRegister(&TriCore::ExtRegsRegClass);
         RegInfo.addLiveIn(VA.getLocReg(), VReg); //mark the register is inuse
         TCCH.saveRegRecord(funName, VA.getLocReg(), false);
-        ArgIn = DAG.getCopyFromReg(Chain, dl, VReg, MVT::i64);
+        ArgIn = DAG.getCopyFromReg(Chain, DL, VReg, MVT::i64);
         TCCH++;
       }
       // else place it inside a data register.
@@ -706,7 +706,7 @@ TriCoreTargetLowering::LowerFormalArguments(SDValue Chain,
         VReg = RegInfo.createVirtualRegister(&TriCore::DataRegsRegClass);
         RegInfo.addLiveIn(VA.getLocReg(), VReg); //mark the register is inuse
         TCCH.saveRegRecord(funName, VA.getLocReg(), false);
-        ArgIn = DAG.getCopyFromReg(Chain, dl, VReg, MVT::i32);
+        ArgIn = DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32);
         TCCH++;
       }
 
@@ -728,7 +728,7 @@ TriCoreTargetLowering::LowerFormalArguments(SDValue Chain,
     if (VA.getValVT() == MVT::i64)
       size = 8;
 
-    const int FI = MF.getFrameInfo()->CreateFixedObject(size, Offset, true);
+    const int FI = MF.getFrameInfo().CreateFixedObject(size, Offset, true);
     EVT PtrTy = getPointerTy(DAG.getDataLayout());
     SDValue FIPtr = DAG.getFrameIndex(FI, PtrTy);
 
@@ -736,8 +736,8 @@ TriCoreTargetLowering::LowerFormalArguments(SDValue Chain,
 //        VA.getValVT() == MVT::i32 && "Only support passing arguments as i32");
 
     //create a load node for the created frame object
-    SDValue Load = DAG.getLoad(VA.getValVT(), dl, Chain, FIPtr,
-        MachinePointerInfo(), false, false, false, 0);
+    SDValue Load = DAG.getLoad(VA.getValVT(), DL, Chain, FIPtr,
+        MachinePointerInfo());
 
     InVals.push_back(Load);
     TCCH.incrArgPos();
@@ -772,7 +772,7 @@ TriCoreTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
                                const SmallVectorImpl<ISD::OutputArg> &Outs,
                                const SmallVectorImpl<SDValue> &OutVals,
-                               SDLoc dl, SelectionDAG &DAG) const {
+                               const SDLoc &DL, SelectionDAG &DAG) const {
   if (isVarArg) {
     report_fatal_error("VarArg not supported");
   }
@@ -781,7 +781,7 @@ TriCoreTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // the return value to a location
   SmallVector<CCValAssign, 16> RVLocs;
 
-  Type* t= DAG.getMachineFunction().getFunction()->getReturnType();
+  Type* t= DAG.getMachineFunction().getFunction().getReturnType();
 
   // CCState - Info about the registers and stack slot.
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
@@ -802,7 +802,7 @@ TriCoreTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
     assert(VA.isRegLoc() && "Can only return in registers!");
 
-    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Flag);
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVals[i], Flag);
 
     Flag = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
@@ -815,5 +815,5 @@ TriCoreTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetOps.push_back(Flag);
   }
 
-  return DAG.getNode(TriCoreISD::RET_FLAG, dl, MVT::Other, RetOps);
+  return DAG.getNode(TriCoreISD::RET_FLAG, DL, MVT::Other, RetOps);
 }

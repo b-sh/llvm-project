@@ -23,9 +23,7 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -40,7 +38,7 @@ public:
 
 class TriCoreAsmBackend : public MCAsmBackend {
 public:
-  TriCoreAsmBackend(const Target &T, const StringRef TT) : MCAsmBackend() {}
+  TriCoreAsmBackend(const Target &T, const StringRef TT) : MCAsmBackend(support::little) {}
 
   ~TriCoreAsmBackend() {}
 
@@ -68,17 +66,17 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  /// processFixupValue - Target hook to process the literal value of a fixup
+  /// evaluateTargetFixup - Target hook to process the literal value of a fixup
   /// if necessary.
-  void processFixupValue(const MCAssembler &Asm, const MCAsmLayout &Layout,
+  virtual bool evaluateTargetFixup(const MCAssembler &Asm, const MCAsmLayout &Layout,
                          const MCFixup &Fixup, const MCFragment *DF,
                          const MCValue &Target, uint64_t &Value,
-                         bool &IsResolved) override;
+                         bool &WasForced) override;
 
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel) const override;
-
-  bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
@@ -86,9 +84,10 @@ public:
     return false;
   }
 
-  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {}
+  void relaxInstruction(MCInst &Inst,
+                                const MCSubtargetInfo &STI) const override {}
 
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override {
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
     if (Count == 0) {
       return true;
     }
@@ -121,22 +120,22 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   return Value;
 }
 
-void TriCoreAsmBackend::processFixupValue(const MCAssembler &Asm,
-                                      const MCAsmLayout &Layout,
-                                      const MCFixup &Fixup,
-                                      const MCFragment *DF,
-                                      const MCValue &Target, uint64_t &Value,
-                                      bool &IsResolved) {
+bool TriCoreAsmBackend::evaluateTargetFixup(const MCAssembler &Asm, const MCAsmLayout &Layout,
+                           const MCFixup &Fixup, const MCFragment *DF,
+                           const MCValue &Target, uint64_t &Value,
+                           bool &WasForced) {
   // We always have resolved fixups for now.
-  IsResolved = true;
+  WasForced = true;
   // At this point we'll ignore the value returned by adjustFixupValue as
   // we are only checking if the fixup can be applied correctly.
   (void)adjustFixupValue(Fixup, Value, &Asm.getContext());
+  return true;
 }
 
-void TriCoreAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                               unsigned DataSize, uint64_t Value,
-                               bool isPCRel) const {
+void TriCoreAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const {
   unsigned NumBytes = 4;
   Value = adjustFixupValue(Fixup, Value);
   if (!Value) {
@@ -144,7 +143,7 @@ void TriCoreAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
   }
 
   unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
+  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the bits from
   // the fixup value. The Value has been "split up" into the appropriate
@@ -162,16 +161,22 @@ public:
   ELFTriCoreAsmBackend(const Target &T, const StringRef TT, uint8_t _OSABI)
       : TriCoreAsmBackend(T, TT), OSABI(_OSABI) {}
 
-  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createTriCoreELFObjectWriter(OS, OSABI);
-  }
+  virtual std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
 };
+
+std::unique_ptr<MCObjectTargetWriter>
+ELFTriCoreAsmBackend::createObjectTargetWriter() const {
+  return createTriCoreELFObjectWriter(OSABI);
+}
 
 } // end anonymous namespace
 
 MCAsmBackend *llvm::createTriCoreAsmBackend(const Target &T,
-                                        const MCRegisterInfo &MRI,
-                                        const Triple &TT, StringRef CPU) {
+                                               const MCSubtargetInfo &STI,
+                                               const MCRegisterInfo &MRI,
+                                               const MCTargetOptions &Options) {
+  const Triple &TT = STI.getTargetTriple();
   const uint8_t ABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
   return new ELFTriCoreAsmBackend(T, TT.getTriple(), ABI);
 }
