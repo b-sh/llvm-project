@@ -269,7 +269,7 @@ static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, ISD::CondCode CC,
 
       RHSlo = DAG.getConstant(lowerByte, dl, MVT::i32);
       RHShi = DAG.getConstant(HigherByte, dl, MVT::i32);
-      RHShi.dump();
+//      RHShi.dump();
     }
 
     SDValue TargetEQ;
@@ -423,7 +423,7 @@ TriCoreTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   BB->addSuccessor(copy0MBB);
   BB->addSuccessor(copy1MBB);
 
-  MI->dump();
+  // MI->dump();
 
   BuildMI(BB, dl, TII.get(TriCore::JNZsbr))
     .addMBB(copy1MBB)
@@ -597,7 +597,7 @@ SDValue TriCoreTargetLowering::LowerCallResult(
                  *DAG.getContext());
 
   Type* t= DAG.getMachineFunction().getFunction().getReturnType();
-  t->dump();
+  // t->dump();
   outs() << "LowerCallResult IsPointer: " << t->isPointerTy() << "\n";
 
   CCInfo.AnalyzeCallResult(Ins, RetCC_TriCore);
